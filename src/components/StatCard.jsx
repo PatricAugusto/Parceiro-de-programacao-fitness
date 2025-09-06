@@ -1,14 +1,19 @@
-// src/components/StatCard.jsx
 import React from 'react';
 import styled from 'styled-components';
 
 const CardContainer = styled.div`
-  background-color: #2d3748; /* Cor de fundo cinza */
+  background-color: #2d3748;
   padding: 1rem;
   border-radius: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border: 1px solid transparent; 
+  transition: border-color 0.3s ease;
+
+  &:hover {
+    border-color: #48bb78; 
+  }
 `;
 
 const Title = styled.h3`

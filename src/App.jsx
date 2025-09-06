@@ -1,19 +1,18 @@
-// src/App.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Dashboard from './components/Dashboard';
 import ExerciseForm from './components/ExerciseForm';
+import ProgressModal from './components/ProgressModal';
 
-// Componente estilizado para o contêiner principal
 const AppContainer = styled.div`
-  background-color: #1a202c; /* Cor de fundo cinza escuro */
+  background-color: #1a202c;
   min-height: 100vh;
   padding: 2rem;
-  color: #f7fafc; /* Cor do texto principal */
+  color: #f7fafc;
 `;
 
 const MainTitle = styled.h1`
-  font-size: 2.25rem; /* 36px */
+  font-size: 2.25rem;
   font-weight: bold;
   text-align: center;
   margin-bottom: 2rem;
@@ -29,19 +28,120 @@ const ContentWrapper = styled.div`
 `;
 
 function App() {
-  const [exercises, setExercises] = useState([]);
+  const [exercises, setExercises] = useState(() => {
+    try {
+      const storedExercises = localStorage.getItem('exercises');
+      return storedExercises ? JSON.parse(storedExercises) : [];
+    } catch (error) {
+      console.error("Erro ao carregar dados do LocalStorage:", error);
+      return [];
+    }
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentExercise, setCurrentExercise] = useState(null);
+
+  const [isProgressing, setIsProgressing] = useState(false);
+  const [progressExercise, setProgressExercise] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('exercises', JSON.stringify(exercises));
+    } catch (error) {
+      console.error("Erro ao salvar dados no LocalStorage:", error);
+    }
+  }, [exercises]);
 
   const addExercise = (newExercise) => {
-    setExercises([newExercise, ...exercises]);
+    const exerciseWithStatus = {
+      ...newExercise,
+      id: Date.now(),
+      status: 'pending',
+      progress: 0,
+    };
+    setExercises(prevExercises => [exerciseWithStatus, ...prevExercises]);
+  };
+
+  const updateExercise = (updatedExercise) => {
+    setExercises(prevExercises =>
+      prevExercises.map(exercise =>
+        exercise.id === updatedExercise.id ? updatedExercise : exercise
+      )
+    );
+    setIsEditing(false);
+    setCurrentExercise(null);
+  };
+
+  const updateExerciseStatus = (id, newStatus) => {
+    setExercises(prevExercises =>
+      prevExercises.map(exercise =>
+        exercise.id === id ? { ...exercise, status: newStatus } : exercise
+      )
+    );
+  };
+
+  const deleteExercise = (id) => {
+    setExercises(prevExercises => prevExercises.filter(exercise => exercise.id !== id));
+  };
+
+  const startEdit = (exercise) => {
+    setIsEditing(true);
+    setCurrentExercise(exercise);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setCurrentExercise(null);
+  };
+
+  const startProgress = (exercise) => {
+    setIsProgressing(true);
+    setProgressExercise(exercise);
+  };
+
+  const cancelProgress = () => {
+    setIsProgressing(false);
+    setProgressExercise(null);
+  };
+
+  const updateProgress = (id, newDistance, newDuration) => {
+    setExercises(prevExercises =>
+      prevExercises.map(exercise =>
+        exercise.id === id ? { ...exercise, distance: newDistance, duration: newDuration } : exercise
+      )
+    );
+    cancelProgress();
   };
 
   return (
     <AppContainer>
       <MainTitle>Monitor de Exercícios</MainTitle>
       <ContentWrapper>
-        <Dashboard exercises={exercises} />
-        <ExerciseForm onAddExercise={addExercise} />
+        <Dashboard
+          exercises={exercises}
+          updateStatus={updateExerciseStatus}
+          onEdit={startEdit}
+          onProgress={startProgress}
+          onDelete={deleteExercise} 
+        />
+        {isEditing ? (
+          <ExerciseForm
+            onAddExercise={updateExercise}
+            initialData={currentExercise}
+            onCancel={cancelEdit}
+            isEditing={true}
+          />
+        ) : (
+          <ExerciseForm onAddExercise={addExercise} />
+        )}
       </ContentWrapper>
+      {isProgressing && (
+        <ProgressModal
+          exercise={progressExercise}
+          onUpdate={updateProgress}
+          onCancel={cancelProgress}
+        />
+      )}
     </AppContainer>
   );
 }
